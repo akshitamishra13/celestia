@@ -1,4 +1,5 @@
 import { Icon, type IconName } from "@/components/ui/icon";
+import Link from "next/link";
 
 type FeatureCardProps = {
   eyebrow: string;
@@ -7,9 +8,10 @@ type FeatureCardProps = {
   action: string;
   icon: IconName;
   tone: "sun" | "rose";
+  href: string;
 };
 
-export function FeatureCard({ eyebrow, title, description, action, icon, tone }: FeatureCardProps) {
+export function FeatureCard({ eyebrow, title, description, action, icon, tone, href }: FeatureCardProps) {
   return (
     <article className={`feature-card feature-card--${tone}`}>
       <div className="feature-card__top">
@@ -20,9 +22,9 @@ export function FeatureCard({ eyebrow, title, description, action, icon, tone }:
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
-      <a className="feature-card__action" href="#">
+      <Link className="feature-card__action" href={href}>
         {action}<Icon name="arrow" />
-      </a>
+      </Link>
       <div className="feature-card__orbit" aria-hidden="true" />
     </article>
   );

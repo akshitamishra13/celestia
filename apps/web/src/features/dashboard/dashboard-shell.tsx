@@ -65,8 +65,8 @@ export function DashboardShell() {
             <a href="#">View all <Icon name="arrow" /></a>
           </div>
           <div className="feature-grid">
-            <FeatureCard eyebrow="Personal insights" title="Your Birth Chart" description="Explore your personalized Vedic chart and understand the placements unique to you." action="View Kundli" icon="chart" tone="sun" />
-            <FeatureCard eyebrow="Two charts, one story" title="Love Compatibility" description="Discover the natural harmony, strengths, and growth points shared between two charts." action="Check compatibility" icon="heart" tone="rose" />
+            <FeatureCard href="/kundli" eyebrow="Personal insights" title="Your Birth Chart" description="Explore your personalized Vedic chart and understand the placements unique to you." action="View Kundli" icon="chart" tone="sun" />
+            <FeatureCard href="/compatibility" eyebrow="Two charts, one story" title="Love Compatibility" description="Discover the natural harmony, strengths, and growth points shared between two charts." action="Check compatibility" icon="heart" tone="rose" />
           </div>
         </section>
 
