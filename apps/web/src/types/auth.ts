@@ -7,5 +7,5 @@ export type User = {
 
 export type AuthResponse = {
   success: true;
-  data: { user: User };
+  data: { user: User; access_token?: string | null; token_type?: "bearer" | null };
 };
