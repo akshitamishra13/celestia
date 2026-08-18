@@ -8,3 +8,6 @@ PyJWT==2.10.1
 python-multipart==0.0.20
 httpx==0.28.1
 pytest==8.4.1
+reportlab==4.4.3
+timezonefinder==8.2.5
+tzdata==2025.2

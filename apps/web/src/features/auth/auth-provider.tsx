@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getCurrentUser, login as loginRequest, logout as logoutRequest, signup as signupRequest } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, getAccessToken, setAccessToken } from "@/lib/api/client";
 import type { User } from "@/types/auth";
 
 type AuthContextValue = {
@@ -20,27 +20,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!getAccessToken()) {
+      setLoading(false);
+      return;
+    }
+
     getCurrentUser()
       .then((response) => setUser(response.data.user))
       .catch((error: unknown) => {
-        if (!(error instanceof ApiError && error.status === 401)) console.error("Unable to restore session.", error);
+        if (error instanceof ApiError && error.status === 401) setAccessToken(null);
+        else console.error("Unable to restore session.", error);
       })
       .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await loginRequest(email, password);
+    if (!response.data.access_token) throw new Error("The server did not return an access token.");
+    setAccessToken(response.data.access_token);
     setUser(response.data.user);
   }, []);
 
   const signup = useCallback(async (name: string, email: string, password: string) => {
     const response = await signupRequest(name, email, password);
+    if (!response.data.access_token) throw new Error("The server did not return an access token.");
+    setAccessToken(response.data.access_token);
     setUser(response.data.user);
   }, []);
 
   const logout = useCallback(async () => {
-    await logoutRequest();
-    setUser(null);
+    try {
+      await logoutRequest();
+    } finally {
+      setAccessToken(null);
+      setUser(null);
+    }
   }, []);
 
   const value = useMemo(() => ({ user, loading, login, signup, logout }), [user, loading, login, signup, logout]);

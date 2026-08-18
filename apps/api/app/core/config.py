@@ -12,6 +12,17 @@ class Settings(BaseSettings):
     session_minutes: int = 60 * 24 * 7
     frontend_origin: str = "http://127.0.0.1:3000"
     cookie_secure: bool = False
+    astrology_provider: str = "navamsha"
+    navamsha_api_url: str = "https://api.navamsha.in/api/v1"
+    navamsha_api_key: str = ""
+    astrology_observation_point: str = "topocentric"
+    astrology_node_type: str = "mean"
+    vedastro_api_url: str = "https://api.vedastro.org/api/Calculate"
+    vedastro_api_key: str = "FreeAPIUser"
+    astrology_ayanamsha: str = "LAHIRI"
+    geocoding_url: str = "https://nominatim.openstreetmap.org/search"
+    geocoding_user_agent: str = "AstroLive/0.1 (local-prototype)"
+    provider_timeout_seconds: float = 120.0
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

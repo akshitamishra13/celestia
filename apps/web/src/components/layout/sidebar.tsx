@@ -1,12 +1,12 @@
 import { Icon, type IconName } from "@/components/ui/icon";
 
-const navigation: Array<{ label: string; icon: IconName; active?: boolean }> = [
-  { label: "Dashboard", icon: "dashboard", active: true },
-  { label: "My Kundli", icon: "chart" },
-  { label: "Compatibility", icon: "heart" },
-  { label: "Reports", icon: "reports" },
-  { label: "My Profile", icon: "user" },
-  { label: "Settings", icon: "settings" },
+const navigation: Array<{ label: string; icon: IconName; href: string }> = [
+  { label: "Dashboard", icon: "dashboard", href: "/dashboard" },
+  { label: "My Kundli", icon: "chart", href: "/kundli" },
+  { label: "Compatibility", icon: "heart", href: "/compatibility" },
+  { label: "Reports", icon: "reports", href: "/reports" },
+  { label: "My Profile", icon: "user", href: "/profile" },
+  { label: "Settings", icon: "settings", href: "/settings" },
 ];
 
 export function Sidebar({ open, onClose, name, email, onLogout }: { open: boolean; onClose: () => void; name: string; email: string; onLogout: () => void }) {
@@ -24,7 +24,7 @@ export function Sidebar({ open, onClose, name, email, onLogout }: { open: boolea
         <nav className="sidebar-nav" aria-label="Primary navigation">
           <p className="nav-eyebrow">Your space</p>
           {navigation.map((item) => (
-            <a className={`nav-link ${item.active ? "is-active" : ""}`} href={item.active ? "/dashboard" : "#"} key={item.label}>
+            <a className="nav-link" href={item.href} key={item.label}>
               <Icon name={item.icon} />
               <span>{item.label}</span>
             </a>

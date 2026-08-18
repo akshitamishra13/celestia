@@ -34,6 +34,8 @@ class UserResponse(BaseModel):
 
 class AuthData(BaseModel):
     user: UserResponse
+    access_token: str | None = None
+    token_type: str | None = None
 
 
 class SuccessResponse(BaseModel):
