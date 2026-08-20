@@ -4,6 +4,7 @@ import { ProtectedPage } from "@/components/layout/protected-page";
 import { createCompatibility, downloadReport } from "@/lib/api/astrology";
 import type { BirthDetails, Compatibility } from "@/types/astrology";
 import { BirthplaceInput } from "@/components/birthplace-input";
+import { PlainLanguageReport } from "@/components/plain-language-report";
 
 function details(data: FormData, prefix: string): BirthDetails {
   const latitude = data.get(`${prefix}_latitude`);
@@ -120,6 +121,7 @@ function CompatibilityReport({ result }: { result: Compatibility }) {
           {result.cancellations?.some((item) => item.applies) && <div className="cancellation-note"><strong>Applied classical adjustments</strong><ul>{result.cancellations.filter((item) => item.applies).map((item) => <li key={item.rule_id}>{item.koota.replaceAll("_", " ")}: {item.restored_points} points restored</li>)}</ul></div>}
         </section>
       )}
+      <PlainLanguageReport report={result.plain_language_report} />
       <div className="two-column">
         <section className="flow-card">
           <h2>Strengths</h2>

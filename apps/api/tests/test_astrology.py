@@ -18,6 +18,8 @@ def test_kundli_is_cached_and_pdf_is_downloadable(client: TestClient) -> None:
     chart = first.json()["data"]
     assert len(chart["planets"]) == 9
     assert chart["calculation"]["provider"] == "mock"
+    assert len(chart["plain_language_report"]["sections"]) == 8
+    assert {section["title"] for section in chart["plain_language_report"]["sections"]} >= {"Career and professional growth", "Education and learning", "Relationships and partnership"}
 
     latest = client.get("/api/kundli/latest")
     assert latest.status_code == 200
@@ -41,6 +43,11 @@ def test_compatibility_and_report_ownership(client: TestClient) -> None:
     data = match.json()["data"]
     assert 0 <= data["overall_score"] <= 100
     assert {item["name"] for item in data["components"]} == {"Emotional", "Communication", "Lifestyle", "Long-term"}
+    assert data["plain_language_report"]["overview"]
+    assert len(data["plain_language_report"]["sections"]) == len(data["components"])
+    pdf = client.get(f"/api/reports/{data['report_id']}/pdf")
+    assert pdf.status_code == 200
+    assert pdf.content.startswith(b"%PDF")
 
     reports = client.get("/api/reports")
     assert reports.status_code == 200

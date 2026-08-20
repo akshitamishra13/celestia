@@ -2,7 +2,7 @@ from datetime import date, time
 from uuid import uuid4
 
 from app.models.astrology import BirthProfile
-from app.providers.astrology import NavamshaProvider
+from app.providers.astrology import NavamshaProvider, ProviderError
 
 
 def profile(name: str = "Test Person", gender: str | None = None) -> BirthProfile:
@@ -25,6 +25,25 @@ def test_navamsha_chart_normalization(monkeypatch) -> None:
     assert result["summary"]["current_mahadasha"] == "Jupiter"
     assert len(result["planets"]) == 9
     assert result["calculation"]["provider"] == "navamsha"
+
+
+def test_navamsha_chart_survives_temporary_dasha_failure(monkeypatch) -> None:
+    provider = NavamshaProvider()
+    planets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]
+    chart_response = {"ascendant": {"zodiac_sign_name": "Leo", "longitude": 130}, "planets": {
+        name: {"zodiac_sign_name": "Leo", "longitude": 130 + index, "nakshatra_name": "Magha", "nakshatra_pada": 2}
+        for index, name in enumerate(planets)}}
+
+    def fake_call(path, payload):
+        if path == "dasha/current":
+            raise ProviderError("Temporary Dasha outage")
+        return chart_response
+
+    monkeypatch.setattr(provider, "_call", fake_call)
+    result = provider.generate_birth_chart(profile())
+    assert len(result["planets"]) == 9
+    assert result["dashas"] == []
+    assert result["summary"]["current_mahadasha"] == "Not returned"
 
 
 def test_navamsha_compatibility_normalization(monkeypatch) -> None:

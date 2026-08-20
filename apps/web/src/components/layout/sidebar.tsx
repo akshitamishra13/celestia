@@ -6,7 +6,6 @@ const navigation: Array<{ label: string; icon: IconName; href: string }> = [
   { label: "Compatibility", icon: "heart", href: "/compatibility" },
   { label: "Reports", icon: "reports", href: "/reports" },
   { label: "My Profile", icon: "user", href: "/profile" },
-  { label: "Settings", icon: "settings", href: "/settings" },
 ];
 
 export function Sidebar({ open, onClose, name, email, onLogout }: { open: boolean; onClose: () => void; name: string; email: string; onLogout: () => void }) {

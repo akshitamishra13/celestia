@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     geocoding_url: str = "https://nominatim.openstreetmap.org/search"
     geocoding_user_agent: str = "AstroLive/0.1 (local-prototype)"
     provider_timeout_seconds: float = 120.0
+    openai_api_key: str = ""
+    openai_model: str = "gpt-5-mini"
+    openai_api_url: str = "https://api.openai.com/v1"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

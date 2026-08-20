@@ -122,27 +122,33 @@ class NavamshaProvider:
     def _call(self, path: str, payload: dict) -> object:
         if not self.settings.navamsha_api_key.strip():
             raise ProviderError("Navamsha API is selected, but NAVAMSHA_API_KEY is not configured in apps/api/.env.")
-        try:
-            response = httpx.post(f"{self.settings.navamsha_api_url.rstrip('/')}/{path.lstrip('/')}", json=payload,
-                headers={"X-API-Key": self.settings.navamsha_api_key}, timeout=self.settings.provider_timeout_seconds)
-            response.raise_for_status()
-            data = response.json()
-            if not isinstance(data, dict): raise ProviderError("Navamsha returned an unsupported response.")
-            if int(data.get("statusCode", 200)) >= 400: raise ProviderError(str(data.get("message") or data.get("error") or "Navamsha calculation failed."))
-            return data.get("output", data)
-        except httpx.HTTPStatusError as exc:
-            code = exc.response.status_code
-            if code in {401, 403}: raise ProviderError("Navamsha rejected the API key. Check NAVAMSHA_API_KEY in apps/api/.env.") from exc
-            if code == 429: raise ProviderError("Navamsha's request limit has been reached. Please try again shortly.") from exc
-            raise ProviderError(f"Navamsha rejected the calculation (HTTP {code}).") from exc
-        except ProviderError: raise
-        except (httpx.HTTPError, ValueError) as exc:
-            raise ProviderError("Navamsha is temporarily unavailable. Please try again shortly.") from exc
+        for attempt in range(2):
+            try:
+                response = httpx.post(f"{self.settings.navamsha_api_url.rstrip('/')}/{path.lstrip('/')}", json=payload,
+                    headers={"X-API-Key": self.settings.navamsha_api_key}, timeout=self.settings.provider_timeout_seconds)
+                response.raise_for_status()
+                data = response.json()
+                if not isinstance(data, dict): raise ProviderError("Navamsha returned an unsupported response.")
+                if int(data.get("statusCode", 200)) >= 400: raise ProviderError(str(data.get("message") or data.get("error") or "Navamsha calculation failed."))
+                return data.get("output", data)
+            except httpx.HTTPStatusError as exc:
+                code = exc.response.status_code
+                if code in {401, 403}: raise ProviderError("Navamsha rejected the API key. Check NAVAMSHA_API_KEY in apps/api/.env.") from exc
+                if code == 429: raise ProviderError("Navamsha's request limit has been reached. Please try again shortly.") from exc
+                if code < 500 or attempt == 1: raise ProviderError(f"Navamsha rejected the calculation (HTTP {code}).") from exc
+            except ProviderError: raise
+            except (httpx.HTTPError, ValueError) as exc:
+                if attempt == 1: raise ProviderError("Navamsha is temporarily unavailable. Please try again shortly.") from exc
+        raise ProviderError("Navamsha is temporarily unavailable. Please try again shortly.")
 
     def generate_birth_chart(self, profile: BirthProfile) -> dict:
         payload = _navamsha_birth_payload(profile)
         raw = self._call("kundali/basic", payload)
-        dasha = self._call("dasha/current", payload)
+        try:
+            dasha = self._call("dasha/current", payload)
+        except ProviderError:
+            # A Dasha outage should not discard a successfully calculated birth chart.
+            dasha = {}
         if not isinstance(raw, dict): raise ProviderError("Navamsha returned an unsupported Kundli response.")
         ascendant = _field(raw, "ascendant", "lagna") or {}
         lagna_longitude = _number(_field(ascendant, "longitude", "nirayana_longitude", "full_degree", "fullDegree"))

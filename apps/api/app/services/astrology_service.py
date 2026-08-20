@@ -10,6 +10,8 @@ from app.models.astrology import BirthChart, BirthProfile, CompatibilityMatch, R
 from app.providers.astrology import NAKSHATRAS, PLANETS, SIGNS, NavamshaProvider, ProviderError, VedAstroProvider, _profile_data
 from app.schemas.astrology import BirthDetails
 from app.services.location_service import LocationService
+from app.services.compatibility_interpreter import interpret_compatibility
+from app.services.kundli_interpreter import interpret_kundli
 
 
 def digest(value: str) -> str:
@@ -76,9 +78,13 @@ class AstrologyService:
     def chart_for_profile(self, profile: BirthProfile) -> BirthChart:
         key = digest(f"{_profile_key(profile)}|{self.settings.astrology_ayanamsha}|whole_sign|{self.provider.name}|{self.provider.version}")
         existing = self.database.scalar(select(BirthChart).where(BirthChart.birth_profile_id == profile.id, BirthChart.calculation_key == key))
-        if existing: return existing
+        if existing:
+            if existing.chart_data.get("plain_language_report", {}).get("interpretation_version") != "kundli-v2":
+                existing.chart_data = {**existing.chart_data, "plain_language_report": interpret_kundli(existing.chart_data)}
+            return existing
         try: data = self.provider.generate_birth_chart(profile)
         except ProviderError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+        data["plain_language_report"] = interpret_kundli(data)
         chart = BirthChart(birth_profile_id=profile.id, provider=self.provider.name, provider_version=self.provider.version,
             ayanamsha=self.settings.astrology_ayanamsha.lower(), calculation_key=key, chart_data=data)
         self.database.add(chart); self.database.flush(); return chart
@@ -96,10 +102,14 @@ class AstrologyService:
     def compatibility(self, a: BirthChart, b: BirthChart) -> CompatibilityMatch:
         pair = sorted([a.calculation_key, b.calculation_key]); key = digest(f"{pair[0]}|{pair[1]}|{self.provider.name}|match-v2")
         existing = self.database.scalar(select(CompatibilityMatch).where(CompatibilityMatch.user_id == self.user_id, CompatibilityMatch.calculation_key == key))
-        if existing: return existing
+        if existing:
+            if not existing.result_data.get("plain_language_report"):
+                existing.result_data = {**existing.result_data, "plain_language_report": interpret_compatibility(existing.result_data)}
+            return existing
         profiles = [self.database.get(BirthProfile, chart.birth_profile_id) for chart in (a, b)]
         try: data = self.provider.generate_compatibility(profiles[0], profiles[1])
         except ProviderError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+        data["plain_language_report"] = interpret_compatibility(data)
         match = CompatibilityMatch(user_id=self.user_id, person_a_chart_id=a.id, person_b_chart_id=b.id, compatibility_version="match-v2",
             calculation_key=key, result_data=data)
         self.database.add(match); self.database.flush(); return match
@@ -109,6 +119,8 @@ class AstrologyService:
         if not report:
             report = Report(user_id=self.user_id, report_type=report_type, source_id=source_id, title=title, report_data=data)
             self.database.add(report); self.database.flush()
+        elif report.report_data != data:
+            report.report_data = data
         return report
 
     def commit(self) -> None: self.database.commit()
