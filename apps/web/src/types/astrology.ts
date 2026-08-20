@@ -1,6 +1,9 @@
-export type BirthDetails = { name: string; date_of_birth: string; time_of_birth: string; place: string; gender?: string };
+export type BirthDetails = { name: string; date_of_birth: string; time_of_birth: string; place: string; gender?: string; latitude?: number; longitude?: number };
+export type PlaceSuggestion = { label: string; latitude: number; longitude: number };
 export type Planet = { name: string; sign: string; degree: number; house: number; nakshatra: string };
-export type Kundli = { id: string; report_id: string; profile: BirthDetails; summary: Record<string, string>; planets: Planet[]; dashas: Array<{planet: string; period: string}>; chart: Record<string, string>; interpretation: string };
-export type CompatibilityFactor = { name: string; nature: string; description: string; score?: number | null; maximum?: number | null };
-export type Compatibility = { id: string; report_id: string; overall_score: number; maximum_score: number; components: CompatibilityFactor[]; strengths: string[]; areas_to_understand: string[]; summary: string; guidance: string; person_a: BirthDetails; person_b: BirthDetails };
+export type PlainLanguageReport = { overview: string; sections: Array<{title: string; content: string}>; practical_guidance: string[]; disclaimer: string };
+export type Kundli = { id: string; report_id: string; profile: BirthDetails; summary: Record<string, string>; planets: Planet[]; dashas: Array<{planet: string; period: string}>; chart: Record<string, string>; interpretation: string; plain_language_report?: PlainLanguageReport };
+export type CompatibilityFactor = { name: string; nature: string; description: string; score?: number | null; raw_score?: number | null; maximum?: number | null; person_a_value?: string | number | null; person_b_value?: string | number | null; has_dosha?: boolean; relationship?: string | null };
+export type MatchProfile = { sign?: string; sign_lord?: string; nakshatra?: { name?: string; pada?: number; lord?: string }; varna?: string; vashya?: string; gana?: string; nadi?: string; yoni?: string };
+export type Compatibility = { id: string; report_id: string; overall_score: number; maximum_score: number; components: CompatibilityFactor[]; strengths: string[]; areas_to_understand: string[]; summary: string; guidance: string; person_a: BirthDetails; person_b: BirthDetails; match_profiles?: { person_a: MatchProfile; person_b: MatchProfile }; cancellations?: Array<{rule_id: string; koota: string; applies: boolean; restored_points: number}>; plain_language_report?: PlainLanguageReport };
 export type ReportSummary = { id: string; report_type: string; source_id: string; title: string; created_at: string };

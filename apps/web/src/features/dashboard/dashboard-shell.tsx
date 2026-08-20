@@ -6,15 +6,12 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Icon } from "@/components/ui/icon";
 import { FeatureCard } from "./feature-card";
 import { useAuth } from "@/features/auth/auth-provider";
-
-const snapshot = [
-  { label: "Lagna", value: "Taurus", symbol: "♉" },
-  { label: "Moon sign", value: "Cancer", symbol: "☾" },
-  { label: "Nakshatra", value: "Pushya", symbol: "✦" },
-];
+import { getLatestKundli } from "@/lib/api/astrology";
+import type { Kundli } from "@/types/astrology";
 
 export function DashboardShell() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [kundli, setKundli] = useState<Kundli | null>(null);
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
@@ -22,11 +19,27 @@ export function DashboardShell() {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
 
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getLatestKundli()
+      .then((response) => { if (!cancelled) setKundli(response.data); })
+      .catch(() => { if (!cancelled) setKundli(null); });
+    return () => { cancelled = true; };
+  }, [user]);
+
   if (loading || !user) return <div className="auth-loading"><div className="loading-star"><Icon name="sparkles" /></div><p>Opening your cosmic space…</p></div>;
 
   const firstName = user.name.split(" ")[0];
   const initials = user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const today = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const snapshot = [
+    { label: "Lagna", value: kundli?.summary.lagna ?? "—", symbol: "♈" },
+    { label: "Moon sign", value: kundli?.summary.moon_sign ?? "—", symbol: "☾" },
+    { label: "Nakshatra", value: kundli?.summary.nakshatra ?? "—", symbol: "✦" },
+  ];
 
   async function handleLogout() {
     await logout();
@@ -53,7 +66,7 @@ export function DashboardShell() {
         <section className="welcome-panel">
           <div className="welcome-copy">
             <span className="section-kicker"><Icon name="sparkles" /> Your cosmic space</span>
-            <h2>Good morning, {firstName}.</h2>
+            <h2>{greeting}, {firstName}.</h2>
             <p>A thoughtful look at your chart, relationships, and the patterns shaping your journey.</p>
           </div>
           <div className="sun-illustration" aria-hidden="true"><span /><span /><span /></div>
@@ -76,7 +89,7 @@ export function DashboardShell() {
             <div className="snapshot-grid">
               {snapshot.map((item) => <div className="snapshot-item" key={item.label}><span className="snapshot-symbol">{item.symbol}</span><div><span>{item.label}</span><strong>{item.value}</strong></div></div>)}
             </div>
-            <p className="prototype-note">Sample details shown for the dashboard preview.</p>
+            <p className="prototype-note">{kundli ? `Showing the latest Kundli for ${kundli.profile.name}.` : "Generate your Kundli to calculate these details."}</p>
           </section>
 
           <section className="reports-card" aria-labelledby="reports-heading">

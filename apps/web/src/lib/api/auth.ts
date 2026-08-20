@@ -12,7 +12,3 @@ export function login(email: string, password: string) {
 export function signup(name: string, email: string, password: string) {
   return apiRequest<AuthResponse>("/auth/signup", { method: "POST", body: JSON.stringify({ name, email, password }) });
 }
-
-export function logout() {
-  return apiRequest<{ success: true }>("/auth/logout", { method: "POST" });
-}

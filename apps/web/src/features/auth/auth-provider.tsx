@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getCurrentUser, login as loginRequest, logout as logoutRequest, signup as signupRequest } from "@/lib/api/auth";
+import { getCurrentUser, login as loginRequest, signup as signupRequest } from "@/lib/api/auth";
 import { ApiError, getAccessToken, setAccessToken } from "@/lib/api/client";
 import type { User } from "@/types/auth";
 
@@ -49,12 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await logoutRequest();
-    } finally {
-      setAccessToken(null);
-      setUser(null);
-    }
+    setAccessToken(null);
+    setUser(null);
   }, []);
 
   const value = useMemo(() => ({ user, loading, login, signup, logout }), [user, loading, login, signup, logout]);
