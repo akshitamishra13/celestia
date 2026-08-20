@@ -1,5 +1,10 @@
 # AstroLive
 
+Deployment Link: https://celestia-as24-b6a0.vercel.app
+
+Backend : https://celestia-1-cdim.onrender.com/
+Frontend : https://celestia-as24-b6a0.vercel.app
+
 AstroLive is a full-stack Vedic astrology application for generating Kundli, compatibility, and downloadable report experiences. It combines provider-backed astrology calculations with structured, plain-language interpretations while keeping calculated chart data separate from narrative explanations.
 
 ## Features
