@@ -130,8 +130,8 @@ function KundliReport({
 }) {
   return (
     <>
-      <PlainLanguageReport report={kundli.plain_language_report} />
       <KundliCalculation kundli={kundli} onCreateAnother={onCreateAnother} />
+      <PlainLanguageReport report={kundli.plain_language_report} showSupplementary={false} />
     </>
   );
 }
