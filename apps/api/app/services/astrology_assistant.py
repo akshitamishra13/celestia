@@ -8,8 +8,8 @@ import re
 import time
 from pathlib import Path
 from typing import Any
-
 import httpx
+import faiss
 
 from app.core.config import get_settings
 
@@ -47,17 +47,21 @@ def _embed(texts: list[str]) -> tuple[list[list[float]], str]:
     settings = get_settings()
     # Local semantic embeddings are the default so retrieval works without a
     # hosted AI key. OpenAI embeddings remain an explicit opt-in.
-    if settings.astrology_embedding_provider == "openai" and settings.openai_api_key.strip():
-        try:
-            response = httpx.post(f"{settings.openai_api_url.rstrip('/')}/embeddings",
-                headers={"Authorization": f"Bearer {settings.openai_api_key}", "Content-Type": "application/json"},
-                json={"model": settings.openai_embedding_model, "input": texts}, timeout=20)
-            response.raise_for_status()
-            rows = sorted(response.json()["data"], key=lambda row: row["index"])
-            vectors = [_normalize([float(value) for value in row["embedding"]]) for row in rows]
-            return vectors, settings.openai_embedding_model
-        except (httpx.HTTPError, KeyError, TypeError, ValueError):
-            pass
+    if settings.astrology_embedding_provider == "openai":
+        if settings.openai_api_key.strip():
+            try:
+                response = httpx.post(f"{settings.openai_api_url.rstrip('/')}/embeddings",
+                    headers={"Authorization": f"Bearer {settings.openai_api_key}", "Content-Type": "application/json"},
+                    json={"model": settings.openai_embedding_model, "input": texts}, timeout=20)
+                response.raise_for_status()
+                rows = sorted(response.json()["data"], key=lambda row: row["index"])
+                vectors = [_normalize([float(value) for value in row["embedding"]]) for row in rows]
+                return vectors, settings.openai_embedding_model
+            except (httpx.HTTPError, KeyError, TypeError, ValueError):
+                # Never load the large local transformer as an error fallback on
+                # constrained hosts such as Render's 512 MB free instance.
+                return [_local_embedding(text) for text in texts], "local-hash-embedding-v1"
+        return [_local_embedding(text) for text in texts], "local-hash-embedding-v1"
     global _local_encoder
     try:
         from sentence_transformers import SentenceTransformer
