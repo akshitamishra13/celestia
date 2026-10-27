@@ -42,6 +42,27 @@ AstroLive is a full-stack Vedic astrology application for generating Kundli, com
 - Planetary, Dasha, and compatibility tables
 - Compact multi-page layouts with plain-language interpretations
 
+### RAG-style astrology assistant
+
+- The authenticated `/api/assistant/ask` and `/api/assistant/report` endpoints use the signed-in user's latest saved Kundli and return chart facts, source citations, retrieval details, and graph context.
+- The retrieval corpus is `apps/api/app/knowledge/vedic_astrology.json`. Sentence Transformers creates local `all-MiniLM-L6-v2` semantic embeddings, and FAISS `IndexFlatIP` searches for up to four relevant passages.
+- NetworkX builds a graph of planets, signs, houses, and interpretive concepts, then connects the user's calculated placements to that graph. Retrieved passages, verified chart facts, and related graph concepts are assembled as the answer context.
+- This retrieval and graph pipeline runs without an OpenAI key. If a key is configured, the OpenAI Responses API can write the response; otherwise the app assembles a cited extractive response from chart facts and retrieved passages. The extractive fallback can include several passages, so the answer may be broader than the question.
+- The regular API requirements include FAISS, NetworkX, and sentence-transformers. The first local semantic request downloads `all-MiniLM-L6-v2`. If those components are unavailable, deterministic feature-hash embeddings and Python vector/graph fallbacks keep the app usable, with lower retrieval quality.
+- Run `python scripts/evaluate_astrology_assistant.py` from `apps/api` for a small benchmark of retrieval recall, citation ID validity, detected unsupported placement patterns, and latency. It is a smoke benchmark, not a comprehensive answer-quality evaluation.
+
+#### Assistant request flow
+
+```text
+User question + latest owned Kundli
+  -> embed question locally
+  -> retrieve matching Jyotisha passages with FAISS
+  -> build chart-placement context with NetworkX
+  -> generate a cited answer with OpenAI, or assemble an extractive fallback
+  -> show citations and retrieval details in the Kundli page
+  -> save personalized overviews as reports that can be downloaded as PDFs
+```
+
 ### Reliability
 
 - Calculation caching based on birth data and provider configuration
@@ -94,6 +115,7 @@ The interpretation layer receives calculated chart or compatibility fields. It d
 
 - Next.js 15, React 19, and TypeScript
 - FastAPI and Pydantic
+- FAISS, sentence-transformers, and NetworkX for local retrieval-augmented astrology responses
 - SQLAlchemy with SQLite for local development
 - Argon2 and PyJWT
 - Navamsha and VedAstro provider adapters
@@ -130,7 +152,10 @@ For live generated interpretations, optionally add:
 ```dotenv
 OPENAI_API_KEY=your-openai-key
 OPENAI_MODEL=gpt-5-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ```
+
+The astrology assistant uses local `all-MiniLM-L6-v2` embeddings by default. Set `ASTROLOGY_EMBEDDING_PROVIDER=openai` to use the configured OpenAI embedding model instead. The first local embedding run downloads the model; after that it is cached by the model library. OpenAI generation is optional; without a key, the assistant returns a cited extractive response. This feature's local embedding model is separate from the existing structured Kundli interpretation fallback.
 
 Without `OPENAI_API_KEY`, AstroLive produces deterministic structured interpretations so report generation remains available.
 
@@ -189,6 +214,8 @@ Restart the API after changing provider or environment settings.
 | `GET` | `/api/reports` | List the current user's reports |
 | `GET` | `/api/reports/{id}` | Retrieve one owned report |
 | `GET` | `/api/reports/{id}/pdf` | Download a report as PDF |
+| `POST` | `/api/assistant/ask` | Ask about the latest Kundli using retrieved sources and graph context |
+| `POST` | `/api/assistant/report` | Generate a cited personalized overview from the latest Kundli |
 | `GET` | `/health` | Check API health |
 
 Authenticated API requests use:
@@ -219,6 +246,15 @@ Current verified baseline:
 - Frontend TypeScript validation passing
 
 The tests cover authentication, report ownership, Kundli caching, compatibility, PDF downloads, provider normalization, structured interpretations, and temporary Dasha failures.
+
+Run the astrology assistant retrieval smoke benchmark separately:
+
+```powershell
+cd apps\api
+python scripts/evaluate_astrology_assistant.py
+```
+
+It uses a small fixed set of questions and a synthetic chart; its metrics are useful for checking the retrieval path, not for claiming broad response quality.
 
 ## Known limitations
 

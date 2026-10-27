@@ -11,6 +11,7 @@ import {
 import type { Kundli } from "@/types/astrology";
 import { PlainLanguageReport } from "@/components/plain-language-report";
 import { BirthplaceInput } from "@/components/birthplace-input";
+import { AstrologyAssistant } from "@/components/astrology-assistant";
 
 export default function KundliPage() {
   const [kundli, setKundli] = useState<Kundli | null>(null);
@@ -132,6 +133,7 @@ function KundliReport({
     <>
       <KundliCalculation kundli={kundli} onCreateAnother={onCreateAnother} />
       <PlainLanguageReport report={kundli.plain_language_report} showSupplementary={false} />
+      <AstrologyAssistant />
     </>
   );
 }

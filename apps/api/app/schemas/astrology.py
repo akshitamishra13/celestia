@@ -34,6 +34,10 @@ class CompatibilityRequest(BaseModel):
     person_b: BirthDetails
 
 
+class AssistantQuestion(BaseModel):
+    question: str = Field(min_length=3, max_length=1000)
+
+
 class DataResponse(BaseModel):
     success: bool = True
     data: dict | list

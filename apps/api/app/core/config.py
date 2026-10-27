@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     provider_timeout_seconds: float = 120.0
     openai_api_key: str = ""
     openai_model: str = "gpt-5-mini"
+    openai_embedding_model: str = "text-embedding-3-small"
+    astrology_embedding_provider: str = "local"
     openai_api_url: str = "https://api.openai.com/v1"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

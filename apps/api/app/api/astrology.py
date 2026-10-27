@@ -1,4 +1,5 @@
 from io import BytesIO
+import json
 from xml.sax.saxutils import escape
 from uuid import UUID
 
@@ -14,10 +15,41 @@ from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DatabaseDependency
 from app.models.astrology import BirthChart, BirthProfile, CompatibilityMatch, Report
-from app.schemas.astrology import CompatibilityRequest, DataResponse, KundliRequest
+from app.schemas.astrology import AssistantQuestion, CompatibilityRequest, DataResponse, KundliRequest
 from app.services.astrology_service import AstrologyService
+from app.services.astrology_assistant import answer as assistant_answer
 
 router = APIRouter(tags=["astrology"])
+
+
+def _latest_owned_kundli(user: CurrentUser, database: DatabaseDependency) -> Report:
+    report = database.scalar(select(Report).where(Report.user_id == user.id, Report.report_type == "kundli").order_by(Report.created_at.desc()))
+    if not report:
+        raise HTTPException(status_code=404, detail="Create a Kundli before using the astrology assistant.")
+    return report
+
+
+@router.post("/assistant/ask", response_model=DataResponse)
+def ask_astrology(payload: AssistantQuestion, user: CurrentUser, database: DatabaseDependency) -> DataResponse:
+    report = _latest_owned_kundli(user, database)
+    return DataResponse(data=assistant_answer(report.report_data, payload.question.strip()))
+
+
+@router.post("/assistant/report", response_model=DataResponse)
+def personalized_assistant_report(user: CurrentUser, database: DatabaseDependency) -> DataResponse:
+    report = _latest_owned_kundli(user, database)
+    chart = report.report_data
+    prompt = ("Create a concise personalized Kundli overview covering personality and life direction, career and learning, "+
+              "relationships, resources, and current periods. Use only supplied placements. Cite reference passage IDs for all traditional interpretations. "+
+              "Do not claim specific events, medical outcomes, remedies, or unsupported chart factors. Chart summary: "+
+              json.dumps(chart.get("summary", {}))+". Verified placements: "+
+              "; ".join(f"{p.get('name')} in {p.get('sign')}, house {p.get('house')}" for p in chart.get("planets", [])))
+    result = assistant_answer(chart, prompt, report=True)
+    saved = Report(user_id=user.id, report_type="assistant", source_id=report.source_id,
+        title=f"{chart.get('profile', {}).get('name', 'Personalized')} Astrology Overview", report_data=result)
+    database.add(saved)
+    database.commit()
+    return DataResponse(data={**result, "report_id": str(saved.id)})
 
 
 def chart_payload(chart: BirthChart, report: Report) -> dict:
@@ -111,6 +143,14 @@ def report_pdf(report_id: UUID, user: CurrentUser, database: DatabaseDependency)
             story += [Paragraph("Detailed Kundli interpretation", styles["Section"]), Paragraph(escape(str(interpretation.get("overview", ""))), styles["BodySoft"])]
             for section in interpretation.get("sections", []):
                 story += [Paragraph(escape(str(section.get("title", "Life area"))), styles["Section"]), Paragraph(escape(str(section.get("content", ""))), styles["BodySoft"])]
+    elif report.report_type == "assistant":
+        story += [Paragraph("Evidence-grounded personalized overview", styles["Section"]),
+            Paragraph(escape(str(data.get("answer", ""))), styles["BodySoft"]),
+            Paragraph("Verified chart facts", styles["Section"])]
+        story.extend(Paragraph(escape(str(item)), styles["BodySoft"]) for item in data.get("chart_facts", []))
+        story.append(Paragraph("Sources", styles["Section"]))
+        story.extend(Paragraph(escape(f"[{item.get('id')}] {item.get('title')} — {item.get('source')}"), styles["BodySoft"])
+            for item in data.get("citations", []))
     else:
         score = f"{data['overall_score']} / {data.get('maximum_score', 36)}"
         story += [Paragraph("Compatibility overview", styles["Section"]), Paragraph(f"<b>Overall score: {escape(score)}</b>", styles["BodySoft"]), Paragraph(escape(str(data.get("summary", ""))), styles["BodySoft"])]
